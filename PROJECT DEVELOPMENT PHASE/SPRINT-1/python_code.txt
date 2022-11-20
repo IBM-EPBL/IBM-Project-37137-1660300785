@@ -1,0 +1,76 @@
+import time
+import random
+import sys
+import requests 
+import json
+import ibmiotf.application
+import ibmiotf.device
+
+
+# watson device details
+global warn
+organization = "1p9sem"
+devicType =  "smartwaste123"
+deviceId = "76013"
+authMethod= "token"
+authToken= "12345678"
+
+#generate random values for random variables (Distance and load)
+
+def myCommandCallback(cmd):
+    print("Message received from IBM IoT Platform: %s" % cmd.data['command'])
+    m=cmd.data['command']
+
+try:
+        deviceOptions={"org": organization, "type": devicType,"id": deviceId,"auth-method":authMethod,"auth-token":authToken}
+        deviceCli = ibmiotf.device.Client(deviceOptions)
+except Exception as e:
+        print("caught exception connecting device %s" %str(e))
+        sys.exit()
+
+#connect and send a datapoint "Distance" with value integer value into the cloud as a type of event for every 10 seconds
+deviceCli.connect()
+
+while True:
+    lat=10.9368
+    lon=78.1366
+    Distance= random.randint(1,75)
+    Loadcell= random.randint(0,20)
+    data= {'dist':Distance,'load':Loadcell,'latitude':lat,'longitude':lon}
+    if Loadcell<5 and Loadcell>0:
+        load="20%"
+    elif Loadcell<10 and Loadcell>5:
+        load="40%"
+    elif Loadcell<15 and Loadcell>10:
+        load="60%"
+    elif Loadcell<18 and Loadcell>15:
+        load="80%"
+    elif Loadcell<20 and Loadcell>18:
+        load="90%"
+    else:
+        load="100%"
+
+    if Distance<7 and Distance>1:
+        level="90%"
+    elif Distance<15 and Distance>7:
+        level="80%"
+    elif Distance<30 and Distance>15:
+        level="60%"
+    elif Distance<45 and Distance>30:
+        level="40%"
+    elif Distance<60 and Distance>45:
+        level="20%"
+    elif Distance<75 and Distance>60:
+        level="10%"
+    else:
+        level="0%"
+    
+    if(Distance=="90%" or load=="90%"):
+        warn="High"
+
+    deviceCli.publishEvent( event="Status", msgFormat="json", data=data, qos=0)
+    print(data)
+    time.sleep(2)
+    deviceCli.commandCallback=myCommandCallback
+#disconnect the device
+deviceCli.disconnect()
